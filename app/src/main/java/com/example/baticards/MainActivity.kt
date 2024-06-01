@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,16 +22,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.getValue
@@ -38,9 +44,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.toSize
+import androidx.core.content.ContextCompat.startActivity
 import com.example.baticards.ui.theme.BatiCardsTheme
 
 class MainActivity : ComponentActivity() {
@@ -61,6 +70,7 @@ class MainActivity : ComponentActivity() {
 }
 
 
+//UI for the start screen
 @Composable
 fun BatiStartScreen(onCreateCardClick: () -> Unit) {
     Column(
@@ -95,7 +105,9 @@ fun BatiStartScreen(onCreateCardClick: () -> Unit) {
     }
 }
 
-class GreetingFormActivity : ComponentActivity() {
+//Greeting Form page
+class GreetingFormActivity : ComponentActivity(), GreetingCardHandler {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -104,39 +116,29 @@ class GreetingFormActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GreetingForm()
+                    GreetingForm(this@GreetingFormActivity)
                 }
             }
         }
     }
-}
 
-@Composable
-fun GreetingText (message: String, from: String, modifier: Modifier = Modifier) {
-    Column(
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-    ) {
-        Text(
-            text = message,
-            fontSize = 100.sp,
-            lineHeight = 116.sp,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = from,
-            fontSize = 36.sp,
-            modifier = Modifier
-                .padding(16.dp)
-                .align(alignment = Alignment.CenterHorizontally)
-        )
+    //Collecting the data from the greeting form
+    override fun startGreetingCardActivity(message: String, signature: String, theme: String) {
+        val intent = Intent(this, GreetingCardActivity::class.java).apply {
+            putExtra(GreetingCardActivity.MESSAGE_EXTRA, message)
+            putExtra(GreetingCardActivity.SIGNATURE_EXTRA, signature)
+            putExtra(GreetingCardActivity.THEME_EXTRA, theme)
+        }
+        startActivity(intent)
     }
 }
 
+//UI for the greeting form
 @Composable
-fun GreetingForm() {
+fun GreetingForm(greetingCardHandler: GreetingCardHandler) {
     var message by remember { mutableStateOf("") }
     var signature by remember { mutableStateOf("") }
+    var selectedTheme by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -176,12 +178,12 @@ fun GreetingForm() {
             modifier = Modifier.padding(bottom = 0.dp)
         )
 
-        ThemeDropdownMenu()
+        ThemeDropdownMenu(selectedTheme = selectedTheme, onThemeSelected = { selectedTheme = it })
 
-        Button(onClick = {
-            // Handle button click here
-            // You can use 'message', 'signature', and 'selectedTheme' variables here
-        },
+        Button(
+            onClick = {
+                greetingCardHandler.startGreetingCardActivity(message, signature, selectedTheme)
+            },
             modifier = Modifier
                 .padding(32.dp)
                 .height(50.dp)
@@ -189,36 +191,32 @@ fun GreetingForm() {
             Text(
                 text = "Craft Card",
                 fontSize = 20.sp,
-                letterSpacing = 2.sp)
+                letterSpacing = 2.sp
+            )
         }
     }
 }
 
+//function for the theme dropdown menu
 @Composable
-fun ThemeDropdownMenu () {
-    var expanded by remember { mutableStateOf(false) }
+fun ThemeDropdownMenu(selectedTheme: String, onThemeSelected: (String) -> Unit) {
     val themes = listOf("Artsy", "Classy", "Colorful", "Cute", "Elegant", "Floral", "Simple")
-    var selectedTheme by remember { mutableStateOf("") }
-
-    var textFieldSize by remember { mutableStateOf(Size.Zero) }
-
-    val icon = if (expanded)
-        Icons.Filled.KeyboardArrowUp
-    else
-        Icons.Filled.KeyboardArrowDown
+    var expanded by remember { mutableStateOf(false) }
 
     Column(Modifier.padding(20.dp)) {
         OutlinedTextField(
             value = selectedTheme,
-            onValueChange = { selectedTheme = it},
+            onValueChange = {},
+            textStyle = TextStyle(fontSize = 22.sp),
             modifier = Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { coordinates -> textFieldSize = coordinates.size.toSize() },
-            //label = {Text("Theme")},
-            textStyle = TextStyle(fontSize = 22.sp),
+                .padding(bottom = 8.dp),
             trailingIcon = {
-                Icon(icon,"contentDescription",
-                    Modifier.clickable {expanded = !expanded})
+                Icon(
+                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Expand/Collapse",
+                    modifier = Modifier.clickable { expanded = !expanded }
+                )
             }
         )
         DropdownMenu(
@@ -228,7 +226,7 @@ fun ThemeDropdownMenu () {
         ) {
             themes.forEach { theme ->
                 DropdownMenuItem(text = { Text(text = theme) }, onClick = {
-                    selectedTheme = theme
+                    onThemeSelected(theme)
                     expanded = false
                 })
             }
@@ -236,6 +234,100 @@ fun ThemeDropdownMenu () {
     }
 }
 
+interface GreetingCardHandler {
+    fun startGreetingCardActivity(message: String, signature: String, theme: String)
+}
+
+//Greeting Card page
+class GreetingCardActivity : ComponentActivity() {
+    companion object {
+        const val MESSAGE_EXTRA = "message_extra"
+        const val SIGNATURE_EXTRA = "signature_extra"
+        const val THEME_EXTRA = "theme_extra"
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val message = intent.getStringExtra(MESSAGE_EXTRA) ?: ""
+        val signature = intent.getStringExtra(SIGNATURE_EXTRA) ?: ""
+        val selectedTheme = intent.getStringExtra(THEME_EXTRA) ?: ""
+
+        setContent {
+            BatiCardsTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    GreetingCard(message, signature, selectedTheme, onBackPressed = { finish() })
+                }
+            }
+        }
+    }
+}
+
+//UI for the greeting card
+@Composable
+fun GreetingCard(
+    message: String,
+    signature: String,
+    selectedTheme: String,
+    onBackPressed: () -> Unit
+) {
+    val imageRes = when (selectedTheme.lowercase()) {
+        "artsy" -> R.drawable.artsy
+        "classy" -> R.drawable.classy
+        "colorful" -> R.drawable.colorful
+        "cute" -> R.drawable.cute
+        "elegant" -> R.drawable.elegant
+        "floral" -> R.drawable.floral
+        else -> R.drawable.simple
+    }
+
+        Box {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = "Greeting Card Image",
+                contentScale = ContentScale.Crop,
+                alpha = 0.7F
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = message,
+                    fontSize = 75.sp,
+                    lineHeight = 85.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = signature,
+                    fontSize = 36.sp,
+                    lineHeight = 44.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+    Box(
+        modifier = Modifier
+            .padding(10.dp)
+    ) {
+        Button(
+            onClick = onBackPressed
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+    }
+}
 
 //@Preview(showBackground = true)
 //@Composable
