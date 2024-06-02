@@ -32,6 +32,6 @@ Programming Language:
 # Future Work
 
 * Add error handling and validation
-* Integrate Photos and Camera for background
+* Integrate Photos and Camera for background and store data either in local storage so is persists even if the app closes or if the phone is turned off
 * Allow user to export the card as file or image
 * Further editing capabilities such as font style, size, alignment, and more
